@@ -34,7 +34,7 @@ export default function AppShell({ children, title, actions }) {
     <div className="app-shell">
       <div className={`scrim ${open ? 'on' : ''}`} onClick={() => setOpen(false)} />
       <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Application sidebar">
-        <div className="sb-top"><Logo to="/" /><button className="sb-close" onClick={() => setOpen(false)} aria-label="Close sidebar"><X size={22} /></button></div>
+        <div className="sb-top"><Logo to="/" height={32} /><button className="sb-close" onClick={() => setOpen(false)} aria-label="Close sidebar"><X size={22} /></button></div>
         <Button block onClick={() => navigate('/chat?new=1')}><Plus size={18} strokeWidth={3} /> New Conversation</Button>
         <nav className="sb-nav">
           <Link to="/chat" className={`sb-link ${pathname === '/chat' ? 'active' : ''}`}><MessagesSquare size={18} />AI Chat</Link>

@@ -7,6 +7,8 @@ nav#nav { position: sticky; top: 0; width: 100%; height: 72px; z-index: 50; back
 nav#nav.s { box-shadow: 0 4px 16px rgba(0,0,0,.2); }
 nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 100%; gap: 20px; }
 .logo { display: flex; align-items: center; gap: 10px; font: 400 21px var(--f-display); color: #fff; text-decoration: none; letter-spacing: -.02em; white-space: nowrap; user-select: none; }
+.logo-img { height: 36px; width: auto; object-fit: contain; transition: transform .15s ease, filter .15s ease; }
+.logo:hover .logo-img { transform: scale(1.02); filter: drop-shadow(0 0 10px rgba(255, 199, 0, 0.45)); }
 .logo-ai { margin-left: 6px; background: var(--lime); color: var(--ink); border-radius: 7px; padding: 1px 7px; font-size: 15px; box-shadow: 0 2.5px 0 #9e6800; vertical-align: 2px; }
 .logo.dark { color: var(--ink); }
 nav ul.nav-links { display: flex; align-items: center; gap: 20px; list-style: none; margin: 0 auto; padding: 0; }

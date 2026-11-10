@@ -1,19 +1,31 @@
 import { Link } from 'react-router-dom';
-export function LogoMark({ size = 34 }) {
+
+/** The vibrant golden Brutality AI warrior emblem mark */
+export function LogoMark({ size = 36, className = '' }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 34 34" aria-hidden="true">
-      <rect x="1" y="3.5" width="32" height="30" rx="9" fill="#000000" />
-      <rect x="1" y="0.5" width="32" height="30" rx="9" fill="#FFC700" stroke="#d49200" strokeWidth="1.5" />
-      <path d="M10.5 7.5h8.2a4.6 4.6 0 0 1 2.1 8.7 5.2 5.2 0 0 1-1.7 10.3h-8.6z" fill="#111318" />
-      <path d="M14.4 11.4v3.6h3.5a1.8 1.8 0 0 0 0-3.6zm0 7.6v3.6h4.1a1.8 1.8 0 0 0 0-3.6z" fill="#FFC700" />
-    </svg>
+    <img
+      src="/logo-mark.png"
+      alt="Brutality AI Emblem"
+      width={size}
+      height={size}
+      className={`logo-mark-img ${className}`}
+      style={{ display: 'inline-block', verticalAlign: 'middle', objectFit: 'contain' }}
+    />
   );
 }
-export default function Logo({ to = '/', dark = false }) {
+
+/** Full Brutality AI logo in vibrant golden yellow */
+export default function Logo({ to = '/', dark = false, variant = 'gold', height = 36 }) {
+  const src = dark ? '/logo-dark.png' : variant === 'nav' ? '/logo-nav.png' : '/logo-gold.png';
   return (
     <Link to={to} className={`logo ${dark ? 'dark' : ''}`} aria-label="Brutality AI home">
-      <LogoMark />
-      <span>BRUTALITY<span className="logo-ai">AI</span></span>
+      <img
+        src={src}
+        alt="Brutality AI"
+        height={height}
+        className="logo-img"
+        style={{ height: `${height}px`, width: 'auto', display: 'block', objectFit: 'contain' }}
+      />
     </Link>
   );
 }
