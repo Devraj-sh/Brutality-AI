@@ -32,7 +32,7 @@ export function ConsistencyLine({ data, height = 220 }) {
           <XAxis dataKey="week" tick={axis} axisLine={false} tickLine={false} />
           <YAxis domain={[0, 100]} ticks={[0, 50, 100]} tick={axis} axisLine={false} tickLine={false} unit="%" />
           <Tooltip {...tip} formatter={(v) => [`${v}%`, 'Consistency']} />
-          <Line type="monotone" dataKey="score" stroke="#111318" strokeWidth={4} dot={{ r: 6, fill: '#D6FF3D', stroke: '#111318', strokeWidth: 2 }} activeDot={{ r: 8, fill: '#D6FF3D', stroke: '#000', strokeWidth: 3 }} animationDuration={1000} />
+          <Line type="monotone" dataKey="score" stroke="#111318" strokeWidth={4} dot={{ r: 6, fill: '#FFC700', stroke: '#111318', strokeWidth: 2 }} activeDot={{ r: 8, fill: '#FFC700', stroke: '#000', strokeWidth: 3 }} animationDuration={1000} />
         </LineChart>
       </ResponsiveContainer>
     </div>

@@ -6,7 +6,7 @@ export default function Toasts() {
     <div className="toast-stack" aria-live="polite">
       {toasts.map((t) => (
         <div key={t.id} className={`toast ${t.type === 'error' ? 'error' : ''}`}>
-          {t.type === 'error' ? <AlertTriangle size={18} color="#f84848" /> : <CheckCircle2 size={18} color="#D6FF3D" />}{t.message}
+          {t.type === 'error' ? <AlertTriangle size={18} color="#f84848" /> : <CheckCircle2 size={18} color="#FFC700" />}{t.message}
         </div>
       ))}
     </div>
