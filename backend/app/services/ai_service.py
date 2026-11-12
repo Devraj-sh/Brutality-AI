@@ -123,11 +123,22 @@ class MockAIService(BaseAIService):
 
     def generate_text(self, system_prompt: str, user_prompt: str) -> str:
         user_lower = user_prompt.lower()
-        if "hello" in user_lower or "hi" in user_lower:
-            return "State your target clearly. Brutality AI is listening. What are we building or conquering today?"
-        if "tired" in user_lower or "can't" in user_lower:
-            return "Fatigue is information, not an excuse to quit. Break the task down, execute the first 10 minutes, and evaluate after."
-        return "Understood. The commitment is noted. Your execution will speak louder than your explanation."
+        if any(w in user_lower for w in ["what should i do", "what do i do", "right now", "next"]):
+            return "Identify your single highest-friction commitment for today. Cut out all notifications, open the work, and execute 20 minutes without pause. Momentum follows action, not debate."
+        if any(w in user_lower for w in ["hello", "hi", "hey"]):
+            return "Brutality AI operational. State your commitment clearly. What are we building or conquering today?"
+        if any(w in user_lower for w in ["tired", "can't", "exhausted"]):
+            return "Fatigue is information, not a permission slip to surrender. Scale down to a 10-minute micro-sprint, execute right now, and evaluate after."
+        if any(w in user_lower for w in ["busy", "no time"]):
+            return "You don't lack time—you lack priority alignment. Identify the low-value distraction you indulged in today, eliminate it, and recover your 45-minute commitment window."
+        if any(w in user_lower for w in ["tomorrow", "later"]):
+            return "\"Tomorrow\" is how weeks dissolve into regret. Lock down a precise timestamp for tomorrow, or do the first 5 minutes before you sleep tonight."
+        if any(w in user_lower for w in ["progress", "doing", "streak"]):
+            return "Consistency is binary: either you delivered or you made an excuse. Check your verified stats on the Dashboard and close any remaining gaps today."
+        if any(w in user_lower for w in ["goal", "plan", "want"]):
+            return "A goal without a deadline and measurable daily commitments is just wishful thinking. Specify the deliverable, the daily time required, and the target completion date."
+        return f"Regarding '{user_prompt[:50]}': Commitments demand disciplined execution. State your specific deliverable and time frame, and we will hold you to the standard."
+
 
 
 class OpenAIService(BaseAIService):

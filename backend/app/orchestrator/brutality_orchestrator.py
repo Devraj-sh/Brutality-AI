@@ -334,10 +334,243 @@ class BrutalityOrchestrator:
         return reality_report
 
     # -------------------------------------------------------------
-    # 4. Interactive Chat Flow
+    # 4. Interactive Multi-Agent Chat Routing
     # -------------------------------------------------------------
     def chat_message(self, user_id: str, message: str, goal_id: Optional[str] = None) -> Dict[str, Any]:
-        """Routes chat interaction with memory context and Brutality persona."""
+        """
+        Dynamically routes user messages to the appropriate specialized AI agent
+        (Onboarding, Check-in, Confront, Planner, Reality, Memory) with real DB data.
+        """
+        msg_clean = message.strip()
+        lower = msg_clean.lower()
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+        # 1. WHAT TO DO NOW / TASKS INTENT
+        if any(w in lower for w in ["what should i do", "what do i do", "what's next", "whats next", "tasks", "my task", "show today", "schedule", "to-do", "todo", "right now"]):
+            today_tasks = self.task_repo.get_all(user_id=user_id, scheduled_date=today)
+            pending = [t for t in today_tasks if t.status == "PENDING"]
+            completed = [t for t in today_tasks if t.status == "COMPLETED"]
+            missed = [t for t in today_tasks if t.status in ["MISSED", "BLOCKED"]]
+
+            if pending:
+                next_task = pending[0]
+                task_lines = "\n".join([f"• [{t.priority}] **{t.title}** (~{t.estimated_duration}m) — Criteria: {t.completion_criteria or 'Deliver required output'}" for t in pending])
+                reply = (
+                    f"You have **{len(pending)} pending commitment{'s' if len(pending) > 1 else ''}** for today:\n\n"
+                    f"{task_lines}\n\n"
+                    f"👉 **Immediate Order:** Attack **{next_task.title}** right now.\n"
+                    f"Target duration: {next_task.estimated_duration} minutes. No phone. No browsing. Log your execution when done."
+                )
+                suggestions = [
+                    f"Mark '{next_task.title}' as Completed",
+                    "I am blocked on this task",
+                    "Confront my recent progress"
+                ]
+            elif completed:
+                reply = (
+                    f"You have already crushed all **{len(completed)} scheduled commitments** for today!\n\n"
+                    f"{chr(10).join([f'✓ {t.title}' for t in completed])}\n\n"
+                    "Execution standard upheld. Rest deliberately or lock in tomorrow's commitments."
+                )
+                suggestions = ["Review my progress", "Generate my Reality Report", "Plan tomorrow's commitments"]
+            else:
+                reply = (
+                    "Zero commitments are currently scheduled for today on your board. That is an accountability gap.\n\n"
+                    "Without a daily commitment, drift is guaranteed. What is your primary objective today? State it and I will lock it in."
+                )
+                suggestions = ["Solve 2 LeetCode problems", "Complete 45 min workout", "Ship core backend feature"]
+
+            return {
+                "reply": reply,
+                "agent_name": "Check-in Agent",
+                "intent": "TASKS",
+                "suggestions": suggestions,
+                "metadata": {"pending_count": len(pending), "completed_count": len(completed)}
+            }
+
+        # 2. CONFRONT / REVIEW PROGRESS INTENT
+        if any(w in lower for w in ["progress", "review my progress", "confront my recent progress", "how am i doing", "streak", "consistency", "score"]):
+            stats = self.task_repo.get_stats(user_id)
+            rate = stats["completion_rate"]
+            streak = stats["current_streak"]
+
+            if rate >= 80:
+                tone = "You are delivering with high discipline. The standard is being upheld, but complacency is the enemy. Maintain the streak."
+            elif rate >= 50:
+                tone = "You are inconsistent. Half of your commitments are being compromised by excuses. Turn that 50% into non-negotiable delivery."
+            else:
+                tone = "Critical discipline failure. You are promising much more than you actually deliver. Close the gap immediately."
+
+            reply = (
+                f"**ACCOUNTABILITY AUDIT — VERIFIED METRICS**\n\n"
+                f"• **Completion Rate:** {rate}%\n"
+                f"• **Consistency Score:** {stats['consistency_score']}/100\n"
+                f"• **Current Streak:** {streak} days\n"
+                f"• **Total Deliverables:** {stats['total_commitments']} ({stats['completed_commitments']} Completed, {stats['missed_commitments']} Missed)\n\n"
+                f"{tone}"
+            )
+            return {
+                "reply": reply,
+                "agent_name": "Confront Agent",
+                "intent": "PROGRESS",
+                "suggestions": ["What should I do right now?", "Generate my Reality Report", "Analyze my excuses"],
+                "metadata": stats
+            }
+
+        # 3. REALITY REPORT INTENT
+        if any(w in lower for w in ["reality report", "generate report", "generate reality", "weekly report"]):
+            report = self.generate_weekly_reality_report(user_id)
+            reply = (
+                f"**WEEKLY BRUTALITY REALITY REPORT**\n\n"
+                f"**The Brutal Truth:**\n{report.brutal_truth}\n\n"
+                f"**Excuse Diagnostic:**\n{report.excuse_analysis}\n\n"
+                f"**Verified Strengths:**\n{report.strengths}\n\n"
+                f"**Operational Action Protocol:**\n{report.action_plan}\n\n"
+                f"• Verified Delivery Rate: **{report.completion_rate}%** across {report.total_commitments} commitments."
+            )
+            return {
+                "reply": reply,
+                "agent_name": "Reality Agent",
+                "intent": "REPORT",
+                "suggestions": ["What should I do right now?", "Confront my recent progress", "I accept the protocol"],
+                "metadata": {"report_id": report.id, "rate": report.completion_rate}
+            }
+
+        # 4. EXCUSE CONFRONTATION INTENTS
+        if any(w in lower for w in ["no time", "too busy", "busy", "swamped"]):
+            self.memory.record_interaction_memory(user_id, "EXCUSE_PATTERN", f"User cited time constraint: '{message}'", ["time", "avoidance"])
+            reply = (
+                "\"No time.\" Let's test that claim.\n\n"
+                "Everyone has the same 24 hours. Sleep is 7–8 hours. Work or study is 8 hours. That leaves 8 unallocated hours. "
+                "Where did the 45 minutes for your commitment go?\n\n"
+                "It is rarely lack of time. It is a matter of priority. What distraction did you prioritize over your stated goal?"
+            )
+            return {
+                "reply": reply,
+                "agent_name": "Confront Agent",
+                "intent": "EXCUSE_TIME",
+                "suggestions": ["I got distracted by my phone", "I will do 15 minutes right now", "What should I do right now?"]
+            }
+
+        if any(w in lower for w in ["tired", "exhausted", "sleepy", "no energy", "drained"]):
+            self.memory.record_interaction_memory(user_id, "EXCUSE_PATTERN", f"User cited fatigue: '{message}'", ["fatigue", "avoidance"])
+            reply = (
+                "Fatigue is real, but it is also the most common rationalization for quitting.\n\n"
+                "Ask yourself honestly: could you execute a focused 10-minute micro-version right now? "
+                "If yes, tiredness didn't take away your ability—it just took away your mood.\n\n"
+                "Start for 10 minutes right now. No debate."
+            )
+            return {
+                "reply": reply,
+                "agent_name": "Confront Agent",
+                "intent": "EXCUSE_TIRED",
+                "suggestions": ["Starting 10 minutes right now", "What should I do right now?", "Tomorrow at 7 AM sharp"]
+            }
+
+        if any(w in lower for w in ["tomorrow", "later", "tonight", "will do it", "i'll do it"]):
+            reply = (
+                "\"Tomorrow\" is the graveyard of consistency.\n\n"
+                "You said tomorrow before, and that is how entire weeks evaporate. "
+                "State the exact hour tomorrow you are locking this down, or execute the first 10 minutes immediately."
+            )
+            return {
+                "reply": reply,
+                "agent_name": "Confront Agent",
+                "intent": "EXCUSE_TOMORROW",
+                "suggestions": ["Tomorrow at 7:00 AM sharp", "Executing 10 minutes now", "What should I do right now?"]
+            }
+
+        if any(w in lower for w in ["not in the mood", "no motivation", "unmotivated", "don't feel like", "lazy"]):
+            reply = (
+                "Motivation is an amateur's game. Discipline is professional.\n\n"
+                "You did not make these commitments based on how you would feel. You made them based on where you want to be. "
+                "Open the task and work for 5 minutes. You don't have to like it—you just have to deliver."
+            )
+            return {
+                "reply": reply,
+                "agent_name": "Confront Agent",
+                "intent": "EXCUSE_MOOD",
+                "suggestions": ["Starting 5 minutes now", "What should I do right now?", "Review my progress"]
+            }
+
+        if any(w in lower for w in ["missed", "skipped", "didn't do", "failed to", "couldn't finish"]):
+            reply = (
+                "Missed commitment acknowledged. No sugarcoating: you dropped the standard.\n\n"
+                "State plain facts:\n"
+                "1. Exactly what prevented completion?\n"
+                "2. When will you make up the deficit?\n"
+                "Give me a specific timestamp, not vague intent."
+            )
+            return {
+                "reply": reply,
+                "agent_name": "Confront Agent",
+                "intent": "MISSED",
+                "suggestions": ["I will recover it tonight at 9 PM", "Reschedule to tomorrow morning", "What should I do right now?"]
+            }
+
+        # 5. GOAL SPECIFIC ONBOARDING INTENTS
+        if any(w in lower for w in ["dsa", "leetcode", "algorithm", "coding interview"]):
+            reply = (
+                "DSA mastery is pure quantitative execution. No talent, just volume and reflection.\n\n"
+                "Here is your baseline protocol:\n"
+                "• 2 Problems Daily (1 core topic, 1 weak spot)\n"
+                "• 30 Minutes Reviewing mistakes and patterns\n"
+                "• 1 Timed Mock Interview weekly\n\n"
+                "What is your target deadline date, and which daily time slot are you locking in?"
+            )
+            return {
+                "reply": reply,
+                "agent_name": "Onboarding Agent",
+                "intent": "GOAL_DSA",
+                "suggestions": ["Mornings at 7:00 AM", "By December 30th", "Lock into my board"]
+            }
+
+        if any(w in lower for w in ["gym", "workout", "fitness", "exercise", "weight loss"]):
+            reply = (
+                "Physical discipline drives mental discipline. The workout begins at the decision point, not the gym.\n\n"
+                "Proposed Protocol:\n"
+                "• 4 Sessions / week (non-negotiable)\n"
+                "• Gear packed the night prior\n"
+                "• 45 Minutes of focused intensity\n\n"
+                "Which four days are you locking down? Monday, Tuesday, Thursday, Saturday?"
+            )
+            return {
+                "reply": reply,
+                "agent_name": "Onboarding Agent",
+                "intent": "GOAL_GYM",
+                "suggestions": ["Mon, Tue, Thu, Sat at 6 PM", "Mornings before work", "Lock into my board"]
+            }
+
+        # 6. GREETINGS & HELP
+        if any(w in lower for w in ["hello", "hi", "hey", "sup"]):
+            reply = (
+                "Brutality AI online. Skip the small talk.\n\n"
+                "What is the single most important commitment you need to deliver today?"
+            )
+            return {
+                "reply": reply,
+                "agent_name": "Onboarding Agent",
+                "intent": "GREETING",
+                "suggestions": ["What should I do right now?", "Confront my recent progress", "I want to master DSA"]
+            }
+
+        if any(w in lower for w in ["help", "how do you work", "what can you do"]):
+            reply = (
+                "BRUTALITY AI enforces four core operational phases:\n\n"
+                "1. **Onboarding**: Converts goals into daily scheduled deliverables with strict completion criteria.\n"
+                "2. **Check-ins**: Verifies real-world delivery against what you promised.\n"
+                "3. **Confrontation**: Eliminates vague excuses and flags avoidance habits.\n"
+                "4. **Reality Reports**: Synthesizes unvarnished weekly progress audits from database metrics.\n\n"
+                "Start by checking your commitments or asking what to do right now."
+            )
+            return {
+                "reply": reply,
+                "agent_name": "Onboarding Agent",
+                "intent": "HELP",
+                "suggestions": ["What should I do right now?", "Confront my recent progress", "Generate my Reality Report"]
+            }
+
+        # 7. DEFAULT / COACHING FALLBACK
         mem_context = self.memory.get_user_context(user_id=user_id, query_hint=message)
         system_prompt = (
             "You are BRUTALITY AI. "
@@ -345,18 +578,17 @@ class BrutalityOrchestrator:
             "Help the user execute their goals. Call out avoidance and demand clarity without insulting them.\n"
             f"User memory history:\n{mem_context}"
         )
-        reply = self.ai.generate_text(system_prompt, message)
-
-        suggestions = [
-            "What should I do right now?",
-            "Confront my recent progress",
-            "Generate my Reality Report"
-        ]
+        llm_reply = self.ai.generate_text(system_prompt, message)
 
         return {
-            "reply": reply,
-            "agent_name": "BrutalityOrchestrator",
+            "reply": llm_reply,
+            "agent_name": "Confront Agent",
             "intent": "COACHING",
-            "suggestions": suggestions,
+            "suggestions": [
+                "What should I do right now?",
+                "Confront my recent progress",
+                "Generate my Reality Report"
+            ],
             "metadata": {"has_memory_context": bool(mem_context)}
         }
+
